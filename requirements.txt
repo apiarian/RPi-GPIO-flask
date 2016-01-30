@@ -1,0 +1,13 @@
+blessings==1.6
+bpython==0.15
+curtsies==0.2.6
+Flask==0.10.1
+greenlet==0.4.9
+itsdangerous==0.24
+Jinja2==2.8
+MarkupSafe==0.23
+Pygments==2.1
+requests==2.9.1
+six==1.10.0
+wcwidth==0.1.6
+Werkzeug==0.11.3
