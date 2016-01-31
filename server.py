@@ -1,7 +1,24 @@
 from flask import Flask
 app = Flask(__name__)
 
-import RPi.GPIO as gpio
+try:
+	import RPi.GPIO as gpio
+except:
+	print("using dummy gpio")
+	class DummyGPIO:
+		def setmode(mode):
+			return 1
+		def setup(channel, mode):
+			return 1
+		def input(channel):
+			return 1
+		def output(channel, level):
+			return 1
+	gpio = DummyGPIO
+	gpio.BCM = 0
+	gpio.IN = 0
+	gpio.OUT = 0
+	gpio.RPI_INFO = ['probably not a raspberry pi.']
 
 pins = {
 	'input': {
@@ -12,12 +29,22 @@ pins = {
 	},
 }
 
+def make_404(thing, group):
+	return ('could not find "{}" among {}'.format(thing, list(group)), 404)
+
+def make_404_pin_group(name, group):
+	return make_404(name, pins[group].keys())
+
+def channel_value_string(channel):
+	value = gpio.input(channel)
+	return '{}'.format(value)
+
 def initialize_gpio():
 	gpio.setmode(gpio.BCM);
 
 @app.route('/')
 def root():
-	return 'try "/input" or "/output"'
+	return 'try "/input", "/output", or "/rpi_info"'
 
 @app.route('/rpi_info')
 def rpi_info():
@@ -32,10 +59,9 @@ def read_pin(name):
 	try:
 		channel = pins['input'][name]
 	except:
-		return 'could not find "{}" among {}'.format(name, list(pins['input'].keys())), 404
+		return make_404_pin_group(name, 'input')
 	gpio.setup(channel, gpio.IN)
-	value = gpio.input(channel)
-	return '{}'.format(value)
+	return channel_value_string(channel)
 
 @app.route('/output')
 def list_outputs():
@@ -46,27 +72,25 @@ def read_output(name):
 	try:
 		channel = pins['output'][name]
 	except:
-		return 'could not find "{}" among {}'.format(name, list(pins['output'].keys())), 404
+		return make_404_pin_group(name, 'output')
 	gpio.setup(channel, gpio.OUT)
-	value = gpio.input(channel)
-	return '{}'.format(value)
+	return channel_value_string(channel)
 
 @app.route('/output/<name>/<value>')
 def set_output(name, value):
 	try:
 		channel = pins['output'][name]
 	except:
-		return 'could not find "{}" among {}'.format(name, list(pins['output'].keys())), 404
-	gpio.setup(channel, gpio.OUT)
+		return make_404_pin_group(name, 'output')
 	try:
 		value = int(value)
 		if value not in (0, 1):
 			raise Exception
 	except:
 		return 'the value should be 0 or 1', 400
+	gpio.setup(channel, gpio.OUT)
 	gpio.output(channel, value)
-	value = gpio.input(channel)
-	return '{}'.format(value)
+	return channel_value_string(channel)
 
 if __name__ == '__main__':
 	initialize_gpio()
